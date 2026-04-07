@@ -1,184 +1,176 @@
-import pandas as pd
-from sklearn.cluster import KMeans
-
-import math
-import time
 import random as r
-list_city = []
-distance_matrix = []
-line = ['0','0']
-k_max = int(input("Введите кол-во класстеров "))
-sum_x = 0
-sum_y = 0
-value_city = 0
-index_city = 0
-with open('city2.csv') as file: #читаем файл с городами
-    while len(line) != 1 :
-        line=file.readline().split(',')
+import time
 
+import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import  cross_val_score, cross_val_predict
+from sklearn.metrics import accuracy_score
+
+line = ['', '']
+
+fruit_x = []
+fruit_y = []
+
+protein_x = []
+protein_y = []
+
+veg_x = []
+veg_y = []
+
+fat_x = []
+fat_y = []
+FILE = 'eat.csv'
+SIZE = 40
+
+with open(FILE, 'r', encoding='UTF-8') as file:
+    while len(line) != 1:
         try:
-            list_city.append((index_city,int(line[1]),int(line[2][0:-1]))) #при формировании списка городов заменяем название города на индекс
-            index_city +=1
+            line = file.readline().split(',')
+            if line[2][:-1] == 'овощ':
+                veg_x.append(int(line[0]))
+                veg_y.append(int(line[1]))
+
+            elif line[2][:-1] == 'фрукт':
+                fruit_x.append(int(line[0]))
+                fruit_y.append(int(line[1]))
+            elif line[2][:-1] == 'протеин':
+                protein_x.append(int(line[0]))
+                protein_y.append(int(line[1]))
+            elif line[2][:-1] == 'жир':
+                fat_x.append(int(line[0]))
+                fat_y.append(int(line[1]))
         except:
-            pass
+            continue
+
+plt.figure(figsize=(8, 6))
+
+# Строим scatter-графики с разными цветами и метками
+plt.scatter(fruit_x, fruit_y, color='red', label='фрукты', alpha=0.7)
+plt.scatter(protein_x, protein_y, color='green', label='Протеин', alpha=0.7)
+plt.scatter(veg_x, veg_y, color='blue', label='Овощи', alpha=0.7)
+plt.scatter(fat_x, fat_y, color='black', label='Жир', alpha=0.7)
+
+# Добавляем заголовок и подписи осей
+plt.title('Три графика точек разного цвета')
+plt.xlabel('Ось X')
+plt.ylabel('Ось Y')
+
+# Показываем легенду
+plt.legend()
+
+# Отображаем сетку для удобства
+plt.grid(True, linestyle='--', alpha=0.5)
 
 
-    for first_name,fx,fy in list_city: # формируем матрицу смежности
-        row_matrix = []
-        sum_x += fx
-        sum_y += fy
-        value_city += 1
-        for second_name,sx,sy in list_city:
-                x = fx - sx
-                y = fy - sy
+def scikit_knn(file):
+    # 1. Загружаем данные
+    df = pd.read_csv(file)
+    print(df.head(n=5))
+
+    info = df.drop('класс', axis=1)
+    label = df['класс']
+
+    info = info.reset_index(drop=True)
+    label = label.reset_index(drop=True)
+
+    # 2. Создаём модель KNN (p=1 -> расстояние Манхэттена)
+    model = KNeighborsClassifier(n_neighbors=5, p=1)
+
+    # 3. Кросс-валидация (вместо train_test_split)
+    # cross_val_predict возвращает предсказания для каждого объекта,
+    # полученные на фолде, где этот объект был в тесте
+    predictions = cross_val_predict(model, info, label, cv=5)
+
+    # cross_val_score возвращает оценку точности для каждого из 5 фолдов
+    scores = cross_val_score(model, info, label, cv=5)
+
+    # 4. Вывод результатов классификации (как в оригинале)
+    print("\nРезультаты классификации (через CV):")
+    # Теперь проходим по всем данным, так как CV оценивает каждый объект
+    for right, answer, metr in zip(label, predictions, info.values):
+        print(f'Метрики: {metr}  Истинна: {right} -- {answer} :Модель')
+
+    # 5. Проверка точности
+    # Общая точность по всем предсказаниям
+    total_accuracy = accuracy_score(label, predictions)
+    # Средняя точность по фолдам (более надежная метрика)
+    cv_mean = scores.mean()
+    cv_std = scores.std()
+
+    print(f"\nТочность KNN (общая): {total_accuracy * 100:.2f}%")
+    print(f"Точность CV (средняя): {cv_mean * 100:.2f}% (+/- {cv_std * 100:.2f}%)")
+    print(f"Оценки по фолдам: {scores}")
+
+def manhatten_distance(x1, y1, x2, y2, label):
+    return (abs(x1 - x2) + abs(y1 - y2), label[:-1])
 
 
-                distance = (x**2)+(y**2)
-                distance = round(math.sqrt(distance))
-                row_matrix.append(distance)
+def classificate(neibors_list):
+    classes_dict = {}
+    for name_class in neibors_list:
 
-        distance_matrix.append(row_matrix)
-    # for row in distance_matrix: # вывод матрицы
-    #     print(row)
-
-def claster_maker(list_city,distance_matrix,sum_x,sum_y,value_city,k_max): # самописный алгоритм создания кластеров
-
-    mid_x = round(sum_x/value_city)
-    mid_y = round(sum_y/value_city)
-    distance_dict = {}
-    claster_dict = {}
-
-
-    for name ,city_x,city_y in list_city: # вычисляем дистанции городов до средней точки
-        x = city_x - mid_x
-        y = city_y - mid_y
-        distance = round((x ** 2) + (y ** 2))
-        distance_dict[name] = distance
-
-    for i in range(1,k_max+1): #  находим самые удаленные точки
-        key = max(distance_dict,key=distance_dict.get)
-        claster_dict[key] = []
-        del distance_dict[key]
-
-
-    best_dict={}
-    # каждая строка это определенный город ,в строке растояния до других городов
-    # из строки мы выбираем растояния до городов центроидов и ищем минимльное из них ,тоесть к кому ближе город
-    for row in distance_matrix:
-        for i in claster_dict.keys():
-            best_dict[i]=row[i]
-
-        key = min(best_dict,key=best_dict.get)
-        name_city = distance_matrix.index(row)
-        # if name_city not in claster_dict.keys(): # если нужно чтобы центроид не был в кластере
-        claster_dict[key].append(name_city)
-    print(f"ФИНИШ Кластеры:{claster_dict}")
-
-def sci_method(k_max): # создание кластеров через SCIkit-learn
-
-    # Задаём количество кластеров
-    K = k_max
-
-    # Загружаем данные из CSV-файла
-    df = pd.read_csv('citySCI2.csv')
-
-    #Извлекаем координаты для кластеризации
-    X = df[['x', 'y']].values
-
-    #Создаём модель KMeans и обучаем её
-    kmeans = KMeans(n_clusters=K, random_state=42)
-    kmeans.fit(X)
-
-    # Получаем метки кластеров для каждого города
-    df['cluster'] = kmeans.labels_
-
-    # Выводим результат
-    print(df)
-def wcss_maker():# метод локтя для k-means
-    old_sum_distance = 1
-    procent_distence =0
-    value_k = 0
-    while procent_distence < 5:
-        value_k += 1
-        sum_distance = k_means_madeself(k_max=value_k,list_city=list_city,distance_matrix=distance_matrix,wcss_maker_flag=True)
-        procent_distence = ((old_sum_distance - sum_distance)/old_sum_distance)*100
-        old_sum_distance = sum_distance
-
-    return value_k
-
-def k_means_madeself(k_max,list_city,distance_matrix,wcss_maker_flag):
-    claster_dict = {} # словарь для кластеров
-    old_claster_dict = {} # сохряняем старый набор кластеров
-    sum_distance = 0 #cумма квадратов растояния для метода локтя
-    for i in range(1,k_max+1): # выбираем случайные точки
-        key = r.randint(0,len(list_city)-1)
-        claster_dict[key] = []
-    if wcss_maker_flag == False:
-        print(f'первый {claster_dict}\n')
-    while old_claster_dict.keys() != claster_dict.keys():
-        best_dict = {}
-
-        #опредление городов в кластеры
-        for row in distance_matrix:
-            for i in claster_dict.keys():
-                best_dict[i] = row[i]
-
-            key = min(best_dict, key=best_dict.get)
-            name_city = distance_matrix.index(row)
-            # if name_city not in claster_dict.keys(): # если нужно чтобы центроиды не были в кластере
-            claster_dict[key].append(name_city)
-
-
-
-        sum_x=0
-        sum_y=0
-        sum_distance = 0
-        list_next_centroid = []
-        # для каждого кластера находим среднюю точку и ближайший к ней город
-        for key in claster_dict:
-            for city in claster_dict[key]:
-                sum_x += list_city[city][1]
-                sum_y += list_city[city][2]
-            mid_x = round(sum_x / value_city)
-            mid_y = round(sum_y / value_city)
-            min_distance = None
-            next_centroid_claster = 0
-            for city in claster_dict[key]: #поиск наиболее приближенного города к средней координате кластера
-                x = list_city[city][1] - mid_x
-                y = list_city[city][2] - mid_y
-                distance = round((x ** 2) + (y ** 2))
-                if wcss_maker_flag:
-                    sum_distance += distance
-                if min_distance is None or distance < min_distance:
-                    min_distance = distance
-                    next_centroid_claster=city
-            sum_x=0
-            sum_y=0
-            list_next_centroid.append(next_centroid_claster)
-        old_claster_dict = claster_dict.copy() # сохраняем старый набор кластеров
-        claster_dict = {}
-        for key in list_next_centroid: # создаем новый набор кластеров
-            claster_dict[key] = []
-        if wcss_maker_flag == False:
-            print(f'новый {claster_dict}')
-            print(f'старый {old_claster_dict}\n')
+        if name_class not in classes_dict.keys():
+            classes_dict[name_class] = 1
         else:
-            return sum_distance
+            classes_dict[name_class] += 1
+    return max(classes_dict)
 
 
-    print("СОВПАДЕНИЕ! конец")
+def selfmade_knn(file, dot_tup, k):
+    # 1. загружаем точку
+    # 2. находим растояние для каждой другой точки(манхетенн)
+    # 3. определяем ближайших К соседей
+    # 4. опеределяем из сосодей кого больше (фрукт или протеин например) и выдаем результат
+    line = ['', '']
+    distance_list = []
+    k_neibors = []
+    with open("eat.csv", 'r', encoding='UTF-8') as file:
+
+        while len(line) > 1:
+            try:
+                line = file.readline()
+                line = line.split(',')
+
+                file_sweet = int(line[0])
+                file_crunch = int(line[1])
+                label_eat = line[2]
+                distance_list.append(
+                    manhatten_distance(x1=file_sweet, y1=file_crunch, x2=dot_tup[0], y2=dot_tup[1], label=label_eat))
+
+            except:
+                continue
+        distance_list.sort(key=lambda x: x[0])
+
+        k_neibors = [distance_list[i][1] for i in range(0, k)]
+
+        return f'метрики: {dot_tup} Результат: {classificate(k_neibors)} -- Соседи: {k_neibors}'
+
 
 start_time = time.time()
-claster_maker(list_city=list_city,distance_matrix=distance_matrix,sum_x=sum_x,sum_y=sum_y,value_city=value_city,k_max=k_max)
+scikit_knn(FILE)
 end_time = time.time()
-print(f"Время выполнения собственной функции {end_time-start_time:.4f}")
+res_time = end_time - start_time
+print(f'Время :{res_time}')
+
 start_time = time.time()
-sci_method(k_max=k_max)
+for i in range(0, SIZE):
+    class_eat = r.randint(1, 3)
+    if class_eat == 1:
+
+        sweet = r.randint(7, 8)
+        crunch = r.randint(7, 8)
+    elif class_eat == 2:
+
+        sweet = r.randint(2, 5)
+        crunch = r.randint(2, 5)
+    else:
+
+        sweet = r.randint(1, 1)
+        crunch = r.randint(1, 1)
+    eat_tup = (sweet, crunch)
+    print(selfmade_knn(FILE, eat_tup, k=5))
 end_time = time.time()
-print(f"Время выполнения через SCIKIT {end_time-start_time:.4f}")
-print("--------------")
-elbow_k_max = wcss_maker()
-start_time = time.time()
-k_means_madeself(k_max=elbow_k_max,list_city=list_city,distance_matrix=distance_matrix,wcss_maker_flag=False)
-end_time = time.time()
-print(f"Время выполнения через K-Means {end_time-start_time:.4f}")
+res_time = end_time - start_time
+print(f'Время :{res_time}')
+plt.show()
