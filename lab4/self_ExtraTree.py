@@ -18,18 +18,12 @@ def check_training_data(filepath="disease_train.csv"):
 
     print("📊 КОРРЕЛЯЦИЯ ПРИЗНАКОВ С ЦЕЛЕВОЙ ПЕРЕМЕННОЙ (точечно-бисериальная):")
     for i in range(X.shape[1]):
-        # Простая аппроксимация: корреляция Пирсона для бинарного Y
+      
         corr = np.corrcoef(X[:, i], y)[0, 1]
         print(f"   X{i + 1}: {corr:+.3f} {'✅ Информативен' if abs(corr) > 0.15 else '⚠️ Слабый/Шум'}")
     print()
 
 
-# Вызовите в main() после загрузки данных:
-# check_training_data(dataset_path)
-
-# ==========================================================
-# РЕАЛИЗАЦИЯ EXTRA TREE ALGORITHM (ВАШ АЛГОРИТМ)
-# ==========================================================
 class Node:
     """Узел дерева решений"""
     __slots__ = ['feature_idx', 'threshold', 'left', 'right', 'prediction']
