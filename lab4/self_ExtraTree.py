@@ -6,10 +6,6 @@ import math
 from collections import Counter
 
 
-# ==========================================================
-# РЕАЛИЗАЦИЯ EXTRA TREE ALGORITHM (ВАШ АЛГОРИТМ)
-# ==========================================================
-
 class Node:
     """Узел дерева решений"""
     __slots__ = ['feature_idx', 'threshold', 'left', 'right', 'prediction']
@@ -230,9 +226,6 @@ class ExtraTreeClassifier:
         return np.mean(pred == y)
 
 
-# ==========================================================
-# ФУНКЦИИ ДЛЯ РАЗБИЕНИЯ ДАННЫХ (ТОЛЬКО СТАНДАРТНАЯ БИБЛИОТЕКА)
-# ==========================================================
 
 def train_test_split_manual(X, y, test_size=0.2, random_state=None):
     """
@@ -444,9 +437,6 @@ def plot_results(results, stats):
         print("Установите matplotlib: pip install matplotlib")
 
 
-# ==========================================================
-# ЗАПУСК ЭКСПЕРИМЕНТА
-# ==========================================================
 
 def main():
     print("=" * 70)
