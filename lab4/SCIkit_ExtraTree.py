@@ -9,9 +9,6 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-# ==========================================================
-# ФУНКЦИИ ДЛЯ ЭКСПЕРИМЕНТОВ
-# ==========================================================
 
 def run_experiment_sklearn(X, y, n_runs=30, n_estimators=20, max_depth=5, random_state=42):
     """
